@@ -25,9 +25,10 @@ type Consumer struct {
 	// extending consumer to provide http server and database access.
 	userStore dataStoreProvider
 	memStore  memoryStoreProvider
+	encryp *encryptionutils.Encryption
 }
 
-func NewConsumer(queue queueConsumer, userStore dataStoreProvider, memStore memoryStoreProvider, logger *zap.Logger) (*Consumer, error) {
+func NewConsumer(queue queueConsumer, userStore dataStoreProvider, memStore memoryStoreProvider, encryp *encryptionutils.Encryption,logger *zap.Logger) (*Consumer, error) {
 	// connect with the initialized queue.
 	in, err := queue.Subscribe()
 	if err != nil {
@@ -39,6 +40,7 @@ func NewConsumer(queue queueConsumer, userStore dataStoreProvider, memStore memo
 		channel:   in,
 		logger:    logger,
 		userStore: userStore,
+		encryp: encryp,
 		memStore:  memStore,
 	}, nil
 }
@@ -162,7 +164,7 @@ func (c *Consumer) SaveUserDetails(wg *sync.WaitGroup, inputChan chan []*models.
 	for data := range inputChan {
 		for _, user := range data {
 
-			encryptedEmail, err := encryptionutils.Encrypt(user.EmailAddress)
+			encryptedEmail, err := c.encryp.Encrypt(user.EmailAddress)
 			if err != nil {
 				c.logger.Error("error encrypting user", zap.Error(err))
 				errorChan <- err

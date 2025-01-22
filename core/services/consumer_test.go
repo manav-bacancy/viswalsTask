@@ -3,17 +3,19 @@ package services
 import (
 	"database/sql"
 	"errors"
+	"sync"
+	"testing"
+	"time"
+
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/viswals_task/core/models"
+	"github.com/viswals_task/internal/encryptionutils"
 	"github.com/viswals_task/pkg/database/mockdatabase"
 	"github.com/viswals_task/pkg/rabbitmq/mockrabbitmq"
 	"github.com/viswals_task/pkg/redis/mockredis"
 	"go.uber.org/zap"
-	"sync"
-	"testing"
-	"time"
 )
 
 // test the consume work flow with valid inputs
@@ -32,6 +34,9 @@ func TestConsumer(t *testing.T) {
 	log, err := zap.NewDevelopment()
 	assert.NoError(t, err)
 
+	encryp, err := encryptionutils.New([]byte("testtesttesttest"))
+	assert.NoError(t, err)
+
 	userStore.On("CreateUser", mock.Anything, mock.AnythingOfType("*models.UserDetails")).Return(nil)
 	memStore.On("Set", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("*models.UserDetails")).Return(nil)
 
@@ -43,6 +48,7 @@ func TestConsumer(t *testing.T) {
 			consumer: &Consumer{
 				queue:     queueStore,
 				channel:   deliveryChannel,
+				encryp: encryp,
 				logger:    log,
 				userStore: userStore,
 				memStore:  memStore,
@@ -69,7 +75,7 @@ func TestConsumer(t *testing.T) {
 			var wg = new(sync.WaitGroup)
 			wg.Add(1)
 
-			go tc.consumer.Consume(wg)
+			go tc.consumer.Consume(wg, 1)
 
 			tc.channel <- amqp.Delivery{
 				Body: tc.body,
@@ -97,6 +103,10 @@ type TestUserDetails struct {
 func TestToUserDetails(t *testing.T) {
 	log, err := zap.NewDevelopment()
 	assert.NoError(t, err)
+
+	encryp,err := encryptionutils.New([]byte("testtesttesttest"))
+	assert.NoError(t,err)
+
 	var testCases = []TestUserDetails{
 		{
 			name: "valid input",
@@ -155,6 +165,7 @@ func TestToUserDetails(t *testing.T) {
 
 	// Create a blank consumer first
 	consumer := Consumer{
+		encryp: encryp,
 		logger: log,
 	}
 
@@ -196,6 +207,9 @@ func TestSaveUserDetails(t *testing.T) {
 	mockUserStore := new(mockdatabase.MockDatabase)
 	mockUserStoreWithError := new(mockdatabase.MockDatabase)
 
+	encryp,err := encryptionutils.New([]byte("testtesttesttest"))
+	assert.NoError(t,err)
+
 	mockMemStore := new(mockredis.MockRedis)
 
 	mockUserStore.On("CreateUser", mock.Anything, mock.AnythingOfType("*models.UserDetails")).Return(nil)
@@ -231,6 +245,7 @@ func TestSaveUserDetails(t *testing.T) {
 				queue:     nil,
 				channel:   nil,
 				logger:    log,
+				encryp: encryp,
 				userStore: mockUserStore,
 				memStore:  mockMemStore,
 			},
@@ -251,6 +266,7 @@ func TestSaveUserDetails(t *testing.T) {
 				queue:     nil,
 				channel:   nil,
 				logger:    log,
+				encryp: encryp,
 				userStore: mockUserStoreWithError,
 				memStore:  mockMemStore,
 			},

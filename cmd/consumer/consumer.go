@@ -2,19 +2,21 @@ package main
 
 import (
 	"fmt"
-	"github.com/viswals_task/controller"
-	"github.com/viswals_task/core/services"
-	"github.com/viswals_task/internal/logger"
-	"github.com/viswals_task/pkg/database"
-	"github.com/viswals_task/pkg/rabbitmq"
-	"github.com/viswals_task/pkg/redis"
-	"go.uber.org/zap"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/viswals_task/controller"
+	"github.com/viswals_task/core/services"
+	"github.com/viswals_task/internal/encryptionutils"
+	"github.com/viswals_task/internal/logger"
+	"github.com/viswals_task/pkg/database"
+	"github.com/viswals_task/pkg/rabbitmq"
+	"github.com/viswals_task/pkg/redis"
+	"go.uber.org/zap"
 )
 
 var (
@@ -30,6 +32,14 @@ func main() {
 		fmt.Printf("can't initialise logger throws error : %v", err)
 		return
 	}
+
+
+	encr,err := encryptionutils.New([]byte(os.Getenv("ENCRYPTION_KEY")))
+	if err != nil {
+		log.Error("encryption key not provided or invalid ",zap.Error(err))
+		return
+	}
+
 
 	// initialize environment variables.
 	var DbUrl string
@@ -111,7 +121,7 @@ func main() {
 		return
 	}
 
-	consumer, err := services.NewConsumer(queueService, dataStore, memStore, log)
+	consumer, err := services.NewConsumer(queueService, dataStore, memStore,encr, log)
 	if err != nil {
 		log.Error("can't initialise database throws error", zap.Error(err))
 		return
@@ -134,8 +144,9 @@ func main() {
 	log.Info("starting consumer")
 	go consumer.Consume(wg, bufferSize)
 
+
 	// initialize user service.
-	userService := services.NewUserService(dataStore, memStore, log)
+	userService := services.NewUserService(dataStore, memStore, encr,log)
 
 	// initialize controller service.
 	ctl := controller.New(userService, log)

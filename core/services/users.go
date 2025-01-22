@@ -14,13 +14,15 @@ import (
 type UserService struct {
 	dataStore dataStoreProvider
 	memStore  memoryStoreProvider
+	encryp *encryptionutils.Encryption
 	logger    *zap.Logger
 }
 
-func NewUserService(dataStore dataStoreProvider, memStore memoryStoreProvider, logger *zap.Logger) *UserService {
+func NewUserService(dataStore dataStoreProvider, memStore memoryStoreProvider, encryption *encryptionutils.Encryption,logger *zap.Logger) *UserService {
 	return &UserService{
 		dataStore: dataStore,
 		memStore:  memStore,
+		encryp: encryption,
 		logger:    logger,
 	}
 }
@@ -46,7 +48,7 @@ func (us *UserService) GetUser(ctx context.Context, userID string) (*models.User
 			us.logger.Warn("UserService: error setting user in cache", zap.String("user_id", userID), zap.Error(err))
 		}
 	}
-	decryptedEmail, err := encryptionutils.Decrypt(user.EmailAddress)
+	decryptedEmail, err := us.encryp.Decrypt(user.EmailAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +66,7 @@ func (us *UserService) GetAllUsers(ctx context.Context) ([]*models.UserDetails, 
 	}
 
 	for _, user := range users {
-		decryptedEmail, err := encryptionutils.Decrypt(user.EmailAddress)
+		decryptedEmail, err := us.encryp.Decrypt(user.EmailAddress)
 		if err != nil {
 			us.logger.Error("error decrypting email", zap.String("email", user.EmailAddress), zap.Error(err))
 			return nil, err
@@ -94,7 +96,7 @@ func (us *UserService) DeleteUser(ctx context.Context, userID string) error {
 
 func (us *UserService) CreateUser(ctx context.Context, user *models.UserDetails) error {
 	// encrypt users email id
-	newEmail, err := encryptionutils.Encrypt(user.EmailAddress)
+	newEmail, err := us.encryp.Encrypt(user.EmailAddress)
 	if err != nil {
 		return err
 	}
@@ -131,7 +133,7 @@ func (us *UserService) GetAllUsersSSE(ctx context.Context, limit, offset int64) 
 	}
 
 	for _, user := range users {
-		decryptedEmail, err := encryptionutils.Decrypt(user.EmailAddress)
+		decryptedEmail, err := us.encryp.Decrypt(user.EmailAddress)
 		if err != nil {
 			us.logger.Error("error decrypting email", zap.String("email", user.EmailAddress), zap.Error(err))
 			return nil, err

@@ -7,15 +7,23 @@ import (
 	"encoding/base64"
 	"errors"
 	"io"
-	"os"
 )
 
-var (
-	key = []byte(os.Getenv("ENCRYPTION_KEY"))
-)
+type Encryption struct {
+	key []byte
+}
 
-func Encrypt(data string) (string, error) {
-	block, err := aes.NewCipher(key)
+func New(k []byte) (*Encryption, error) {
+	if len(k)%16 != 0 {
+		return nil, errors.New("invalid key length")
+	}
+	return &Encryption{
+		key: k,
+	}, nil
+}
+
+func(e *Encryption) Encrypt(data string) (string, error) {
+	block, err := aes.NewCipher(e.key)
 	if err != nil {
 		return "", err
 	}
@@ -35,14 +43,14 @@ func Encrypt(data string) (string, error) {
 	return base64.StdEncoding.EncodeToString(cipherText), nil
 }
 
-func Decrypt(data string) (string, error) {
+func (e *Encryption) Decrypt(data string) (string, error) {
 	// Decode Base64-encoded cipherText
 	cipherText, err := base64.StdEncoding.DecodeString(data)
 	if err != nil {
 		return "", err
 	}
 
-	block, err := aes.NewCipher(key)
+	block, err := aes.NewCipher(e.key)
 	if err != nil {
 		return "", err
 	}

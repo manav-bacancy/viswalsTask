@@ -24,18 +24,19 @@ type GetUserTestCase struct {
 }
 
 func TestGetUser(t *testing.T) {
-	t.Setenv("ENCRYPTION_KEY", "notyourvalidencryptionkey")
 	// mock variable declaration
 	mockMemStore := new(mockredis.MockRedis)
 	mockMemStoreNoData := new(mockredis.MockRedis)
 	mockUserStore := new(mockdatabase.MockDatabase)
 	mockUserStoreError := new(mockdatabase.MockDatabase)
+	encryp,err := encryptionutils.New([]byte("testtesttesttest"))
+	assert.NoError(t,err)
 
 	actualEmail := "test@test.com"
-	encryptedEmail, err := encryptionutils.Encrypt(actualEmail)
+	encryptedEmail, err := encryp.Encrypt(actualEmail)
 	assert.NoError(t, err)
 
-	decrypted, err := encryptionutils.Decrypt(encryptedEmail)
+	decrypted, err := encryp.Decrypt(encryptedEmail)
 	assert.NoError(t, err)
 	assert.Equal(t, decrypted, actualEmail)
 
@@ -67,6 +68,7 @@ func TestGetUser(t *testing.T) {
 			service: &UserService{
 				dataStore: mockUserStore,
 				memStore:  mockMemStore,
+				encryp: encryp,
 				logger:    log,
 			},
 			input: "1",
@@ -86,6 +88,7 @@ func TestGetUser(t *testing.T) {
 			service: &UserService{
 				dataStore: mockUserStore,
 				memStore:  mockMemStoreNoData,
+				encryp: encryp,
 				logger:    log,
 			},
 			input: "1",
@@ -105,6 +108,7 @@ func TestGetUser(t *testing.T) {
 			service: &UserService{
 				dataStore: mockUserStoreError,
 				memStore:  mockMemStoreNoData,
+				encryp: encryp,
 				logger:    log,
 			},
 			input:      "1",
@@ -140,13 +144,14 @@ type GetAllUserTestCase struct {
 }
 
 func TestGetAllUser(t *testing.T) {
-	t.Setenv("ENCRYPTION_KEY", "notyourvalidencryptionkey")
 	mockUserStore := new(mockdatabase.MockDatabase)
 	mockUserStoreError := new(mockdatabase.MockDatabase)
+	encryp,err := encryptionutils.New([]byte("testtesttesttest"))
+	assert.NoError(t,err)
 	log, err := zap.NewDevelopment()
 	assert.NoError(t, err)
 	actualEmail := "test@test.com"
-	encryptedEmail, err := encryptionutils.Encrypt(actualEmail)
+	encryptedEmail, err := encryp.Encrypt(actualEmail)
 	assert.NoError(t, err)
 
 	outputData := []*models.UserDetails{
@@ -173,6 +178,7 @@ func TestGetAllUser(t *testing.T) {
 			service: &UserService{
 				dataStore: mockUserStore,
 				memStore:  nil,
+				encryp: encryp,
 				logger:    log,
 			},
 			output: []*models.UserDetails{
@@ -193,6 +199,7 @@ func TestGetAllUser(t *testing.T) {
 			service: &UserService{
 				dataStore: mockUserStoreError,
 				memStore:  nil,
+				encryp: encryp,
 				logger:    log,
 			},
 			output:     nil,
@@ -229,6 +236,8 @@ func TestDeleteUser(t *testing.T) {
 	mockUserStore := new(mockdatabase.MockDatabase)
 	mockUserStoreError := new(mockdatabase.MockDatabase)
 	mockMemStoreError := new(mockredis.MockRedis)
+	encryp,err := encryptionutils.New([]byte("testtesttesttest"))
+	assert.NoError(t,err)
 
 	log, err := zap.NewDevelopment()
 	assert.NoError(t, err)
@@ -244,6 +253,7 @@ func TestDeleteUser(t *testing.T) {
 			service: &UserService{
 				dataStore: mockUserStore,
 				memStore:  mockMemStore,
+				encryp: encryp,
 				logger:    log,
 			},
 			input:      "1",
@@ -253,6 +263,7 @@ func TestDeleteUser(t *testing.T) {
 			service: &UserService{
 				dataStore: mockUserStore,
 				memStore:  mockMemStoreError,
+				encryp: encryp,
 				logger:    log,
 			},
 			input:      "1",
@@ -262,6 +273,7 @@ func TestDeleteUser(t *testing.T) {
 			service: &UserService{
 				dataStore: mockUserStoreError,
 				memStore:  mockMemStoreError,
+				encryp: encryp,
 				logger:    log,
 			},
 			input:      "1",
@@ -293,11 +305,12 @@ type CreateUserTestCase struct {
 }
 
 func TestCreateUser(t *testing.T) {
-	t.Setenv("ENCRYPTION_KEY", "notyourvalidencryptionkey")
 	mockMemStore := new(mockredis.MockRedis)
 	mockUserStore := new(mockdatabase.MockDatabase)
 	mockUserStoreError := new(mockdatabase.MockDatabase)
 	mockMemStoreError := new(mockredis.MockRedis)
+	encryp,err := encryptionutils.New([]byte("testtesttesttest"))
+	assert.NoError(t,err)
 	log, err := zap.NewDevelopment()
 	assert.NoError(t, err)
 
@@ -323,6 +336,7 @@ func TestCreateUser(t *testing.T) {
 			service: &UserService{
 				dataStore: mockUserStore,
 				memStore:  mockMemStore,
+				encryp: encryp,
 				logger:    log,
 			},
 			input:      input,
@@ -332,6 +346,7 @@ func TestCreateUser(t *testing.T) {
 			service: &UserService{
 				dataStore: mockUserStore,
 				memStore:  mockMemStoreError,
+				encryp: encryp,
 				logger:    log,
 			},
 			input:      input,
@@ -341,6 +356,7 @@ func TestCreateUser(t *testing.T) {
 			service: &UserService{
 				dataStore: mockUserStoreError,
 				memStore:  mockMemStoreError,
+				encryp: encryp,
 				logger:    log,
 			},
 			input:      input,
@@ -376,13 +392,14 @@ type GetAllUserSSETestCase struct {
 }
 
 func TestGetAllUserSSE(t *testing.T) {
-	t.Setenv("ENCRYPTION_KEY", "notyourvalidencryptionkey")
 	mockUserStore := new(mockdatabase.MockDatabase)
 	mockUserStoreError := new(mockdatabase.MockDatabase)
 	log, err := zap.NewDevelopment()
 	assert.NoError(t, err)
+	encryp,err := encryptionutils.New([]byte("testtesttesttest"))
+	assert.NoError(t,err)
 	actualEmail := "test@test.com"
-	encryptedEmail, err := encryptionutils.Encrypt(actualEmail)
+	encryptedEmail, err := encryp.Encrypt(actualEmail)
 	assert.NoError(t, err)
 
 	limit := int64(1)
@@ -445,6 +462,7 @@ func TestGetAllUserSSE(t *testing.T) {
 			service: &UserService{
 				dataStore: mockUserStore,
 				memStore:  nil,
+				encryp: encryp,
 				logger:    log,
 			},
 			limit:      limit,
@@ -456,6 +474,7 @@ func TestGetAllUserSSE(t *testing.T) {
 			service: &UserService{
 				dataStore: mockUserStoreError,
 				memStore:  nil,
+				encryp: encryp,
 				logger:    log,
 			},
 			limit:      limit,

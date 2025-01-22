@@ -68,12 +68,12 @@ func main() {
 
 	// initializing producer service.
 	producer := services.NewProducer(csvReader, queueService, log)
-	//defer func(producer *services.Producer) {
-	//	err := producer.Close()
-	//	if err != nil {
-	//		log.Error("failed to close rabbitmq producer", zap.Error(err), zap.String("queueName", queueName))
-	//	}
-	//}(producer)
+	defer func() {
+		err := producer.Close()
+		if err != nil {
+			log.Error("failed to close rabbitmq producer", zap.Error(err), zap.String("queueName", queueName))
+		}
+	}()
 
 	// start the producer service
 	batchSize := defaultBatchSize
