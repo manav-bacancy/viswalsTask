@@ -38,9 +38,6 @@ run `docker compose up --build` in root project directory (you can remove the `-
 
 and consumer will extend as API on `http://localhost:5000/`
 
-## Test Case Coverage:
-
-test case coverage:
 
 
 
