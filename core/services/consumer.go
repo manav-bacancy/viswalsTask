@@ -72,43 +72,7 @@ func (c *Consumer) Consume(wg *sync.WaitGroup, size int) {
 		}
 
 		userDetailsInput <- body
-		//details, err := c.ToUserDetails(body)
-		//if err != nil {
-		//	c.logger.Error("error deserializing user details", zap.Error(err), zap.String("body", string(body)))
-		//	continue
-		//}
-
-		//dataToInsert := make([]*models.UserDetails, 0, len(details))
-
-		//for _, user := range details {
-		// encrypt Email id for user
-
-		//encryptedEmail, err := encryptionutils.Encrypt(user.EmailAddress)
-		//if err != nil {
-		//	c.logger.Error("error encrypting email", zap.Error(err), zap.String("email", user.EmailAddress))
-		//	continue
-		//}
-		//user.EmailAddress = encryptedEmail
-		//
-		//ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-
-		// store user detail in the storage.
-		//err = c.SaveUserDetails(ctx, user)
-		//if err != nil {
-		//	cancel()
-		//	c.logger.Error("failed to save user details", zap.Error(err))
-		//	continue
-		//}
-
-		//cancel()
-		//}
-
-		// upon successful acknowledge the data.
-		//err = data.Ack(false)
-		//if err != nil {
-		//	c.logger.Error("failed to ack user details", zap.Error(err), zap.Any("details", details))
-		//}
-
+		
 	}
 
 	c.logger.Info(fmt.Sprintf("Consumer stopped"))
@@ -119,7 +83,7 @@ func (c *Consumer) Consume(wg *sync.WaitGroup, size int) {
 func (c *Consumer) errorLogger(wg *sync.WaitGroup, errorChan chan error) {
 	defer wg.Done()
 	for e := range errorChan {
-		if e == nil {
+		if e != nil {
 			c.logger.Error("error in consumer as", zap.Error(e))
 		}
 	}
@@ -135,28 +99,11 @@ func (c *Consumer) ToUserDetails(wg *sync.WaitGroup, inputChan chan []byte, outp
 			errorChan <- err
 			continue
 		}
+		c.logger.Debug("Consumed data",zap.Int("size",len(users)))
 		outputChan <- users
 	}
 	c.logger.Info(fmt.Sprintf("User Data Marsheller stopped"))
-	//outputChan <- nil
 }
-
-//func (c *Consumer) EncryptEmail(wg *sync.WaitGroup, inputChan chan []*models.UserDetails, outputChan chan []*models.UserDetails, errorChan chan error) {
-//	defer wg.Done()
-//	defer close(outputChan)
-//	for data := range inputChan {
-//		for _, u := range data {
-//			encryptedEmail, err := encryptionutils.Encrypt(u.EmailAddress)
-//			if err != nil {
-//				errorChan <- err
-//				continue
-//			}
-//			u.EmailAddress = encryptedEmail
-//		}
-//		outputChan <- data
-//	}
-//	c.logger.Info(fmt.Sprintf("User Data Encrypter stopped"))
-//}
 
 func (c *Consumer) SaveUserDetails(wg *sync.WaitGroup, inputChan chan []*models.UserDetails, errorChan chan error) {
 	defer wg.Done()

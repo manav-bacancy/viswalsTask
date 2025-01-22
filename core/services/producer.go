@@ -36,14 +36,21 @@ func (p *Producer) Start(batchSize int) error {
 	// read batchSize data from csv reader
 	var isLastRecord = false
 	for {
-		rows, err := csvutils.ReadRows(p.csvReader, batchSize)
+		rows,invalidData, err := csvutils.ReadRows(p.csvReader, batchSize)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				isLastRecord = true
-				break
-			} else {
+				if len(rows) == 0{
+					// file is completed 
+					return  nil
+				}
+			}else {
+				p.logger.Error("error reading csv file as",zap.Error(err))
 				return err
 			}
+		}
+		if invalidData != nil {
+			p.logger.Warn("Invalid Data Found in csv.",zap.Any("data",invalidData))
 		}
 
 		// transform fetched rows to user struct
@@ -57,8 +64,10 @@ func (p *Producer) Start(batchSize int) error {
 		err = p.Publish(ctx, data)
 		if err != nil {
 			cancel()
+			p.logger.Error("error publishing data ",zap.Error(err))
 			return err
 		}
+		p.logger.Debug("Published Messages",zap.Int("count",len(data)))
 		cancel()
 
 		if isLastRecord {
@@ -72,10 +81,12 @@ func (p *Producer) Start(batchSize int) error {
 func (p *Producer) Publish(ctx context.Context, data []*models.UserDetails) error {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
+		p.logger.Error("error marshaling data to queue",zap.Error(err))
 		return err
 	}
 
 	if err := p.queue.Publish(ctx, jsonData); err != nil {
+		p.logger.Error("error publishing data to queue",zap.Error(err))
 		return err
 	}
 	return nil
@@ -88,6 +99,7 @@ func (p *Producer) CsvToStruct(data [][]string) []*models.UserDetails {
 		userDetails := new(models.UserDetails)
 
 		if len(row) != 8 {
+			p.logger.Error("partial data found from csv file ignoring",zap.Any("data",row))
 			continue
 		}
 
