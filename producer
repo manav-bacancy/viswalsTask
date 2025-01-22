@@ -1,0 +1,21 @@
+FROM golang:1.23 AS base
+
+WORKDIR /QueueTask
+
+COPY ./go.mod .
+
+COPY ./go.sum .
+
+RUN go mod tidy
+
+COPY . .
+
+RUN CGO_ENABLED=0 go build ./cmd/producer/
+
+FROM scratch AS final
+
+COPY --from=base ./QueueTask/producer .
+
+COPY --from=base ./QueueTask/csvfiles/ ./csvfiles/
+
+CMD ["/producer"]

@@ -1,0 +1,26 @@
+FROM golang:1.23 AS base
+
+# copy folder to container
+WORKDIR /QueueTask
+
+COPY ./go.mod .
+
+COPY ./go.sum .
+
+# install dependencies
+
+RUN go mod tidy
+
+COPY . .
+
+RUN CGO_ENABLED=0 go build ./cmd/consumer/
+
+FROM scratch AS final
+
+COPY --from=base ./QueueTask/consumer .
+
+COPY --from=base ./QueueTask/migration/ ./migration/
+
+COPY --from=base ./QueueTask/client/ ./client/
+
+CMD ["/consumer"]

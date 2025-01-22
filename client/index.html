@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Sent Events</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid black;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: grey;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Server Sent Event</h1>
+<br/>
+<br/>
+
+<!-- Table to display incoming events -->
+<table id="table">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>First Name</th>
+        <th>Last Name</th>
+        <th>Email</th>
+        <th>Created At</th>
+        <th>Deleted At</th>
+        <th>Merged At</th>
+        <th>Parent User Id</th>
+    </tr>
+    </thead>
+    <tbody>
+    </tbody>
+</table>
+
+<script>
+    const sse = new EventSource(`http://localhost:5000/users/sse?limit=10`);
+
+    // Listen for incoming messages from the server
+    sse.onmessage = function (event) {
+        try {
+            if (event.data === "END" ) {
+                return
+            }
+            // Parse the incoming JSON data
+            const userDetails = JSON.parse(event.data);
+            userDetails.forEach((user) => {
+                const row = document.createElement('tr');
+
+                Object.values(user).forEach(value => {
+                    const cell = document.createElement('td');
+                    console.log(user)
+                    if (typeof value == "object"){
+                        cell.textContent = value.Time
+                    }else{
+                    cell.textContent = value;
+
+                    }
+                    row.appendChild(cell);
+                });
+
+                // Append the row to the table body
+                document.querySelector('#table tbody').appendChild(row);
+            })
+        } catch (error) {
+            console.error("Error parsing JSON data:", error);
+        }
+    }
+
+    // Event when the server closes connection
+    sse.onclose = function() {
+        console.log("all data has been received successfully")
+        sse.close();
+    };
+
+    // Event when an error occurs with the SSE connection
+    sse.onerror = function(ev) {
+        console.log("error receiving data ",ev)
+        sse.close();
+    };
+
+</script>
+</body>
+</html>
