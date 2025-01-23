@@ -48,7 +48,7 @@ func TestConsumer(t *testing.T) {
 			consumer: &Consumer{
 				queue:     queueStore,
 				channel:   deliveryChannel,
-				encryp: encryp,
+				encryp:    encryp,
 				logger:    log,
 				userStore: userStore,
 				memStore:  memStore,
@@ -104,8 +104,8 @@ func TestToUserDetails(t *testing.T) {
 	log, err := zap.NewDevelopment()
 	assert.NoError(t, err)
 
-	encryp,err := encryptionutils.New([]byte("testtesttesttest"))
-	assert.NoError(t,err)
+	encryp, err := encryptionutils.New([]byte("testtesttesttest"))
+	assert.NoError(t, err)
 
 	var testCases = []TestUserDetails{
 		{
@@ -207,8 +207,8 @@ func TestSaveUserDetails(t *testing.T) {
 	mockUserStore := new(mockdatabase.MockDatabase)
 	mockUserStoreWithError := new(mockdatabase.MockDatabase)
 
-	encryp,err := encryptionutils.New([]byte("testtesttesttest"))
-	assert.NoError(t,err)
+	encryp, err := encryptionutils.New([]byte("testtesttesttest"))
+	assert.NoError(t, err)
 
 	mockMemStore := new(mockredis.MockRedis)
 
@@ -245,7 +245,7 @@ func TestSaveUserDetails(t *testing.T) {
 				queue:     nil,
 				channel:   nil,
 				logger:    log,
-				encryp: encryp,
+				encryp:    encryp,
 				userStore: mockUserStore,
 				memStore:  mockMemStore,
 			},
@@ -266,7 +266,7 @@ func TestSaveUserDetails(t *testing.T) {
 				queue:     nil,
 				channel:   nil,
 				logger:    log,
-				encryp: encryp,
+				encryp:    encryp,
 				userStore: mockUserStoreWithError,
 				memStore:  mockMemStore,
 			},
@@ -277,16 +277,16 @@ func TestSaveUserDetails(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			var inputChan = make(chan []*models.UserDetails, 10)
-			var errorChan = make(chan error)
+			var errorChan = make(chan error, 10)
 			wg := new(sync.WaitGroup)
 			wg.Add(1)
 			go testCase.consumer.SaveUserDetails(wg, inputChan, errorChan)
 			inputChan <- testCase.input
 			close(inputChan)
-			//e := <-errorChan
 			if testCase.throwError {
 				assert.Error(t, <-errorChan)
 			}
+			wg.Wait()
 		})
 	}
 
